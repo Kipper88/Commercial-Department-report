@@ -1,24 +1,20 @@
-from fetcher.fetcher import *
+from .fetcher.fetcher import *
+
+import asyncio
 
 async def formatted_data():
-    # готово
-    margin, count_orders = await get_314()
+    # Запускаем все запросы параллельно
+    margin_count_orders, framed_kp, meeting, communications, completed_tasks, calls_2x_minutes = await asyncio.gather(
+        get_314(),
+        get_105(),
+        get_231(),
+        get_152(),
+        copleted_orders(),
+        get_337()
+    )
+
+    margin, count_orders = margin_count_orders
     
-    # не пашет
-    #framed_kp = await get_105()
+    plan_activity1 = await plan_activity(communications[1], completed_tasks[1])
     
-    # готово
-    meeting = await get_231()
-    
-    # не пашет
-    #communications = await get_152()
-    
-    
-    completed_tasks = await copleted_orders()
-    
-    
-    plan_activity = ...
-    
-    calls_2x_minutes = ...
-    
-    return margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity, calls_2x_minutes
+    return margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes

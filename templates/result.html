@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Результаты</title>
+</head>
+<body>
+  <h3>✅ Корректные имена:</h3>
+  <ul>
+    {% for name in valid_names %}
+      <li>{{ name }}</li>
+    {% endfor %}
+  </ul>
+
+  {% if invalid_names %}
+  <h3>❌ Некорректные записи:</h3>
+  <ul>
+    {% for name in invalid_names %}
+      <li>{{ name }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</body>
+</html>

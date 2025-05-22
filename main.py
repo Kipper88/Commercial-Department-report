@@ -1,104 +1,94 @@
 from utils.data.data_form import formatted_data
-
-async def lalala():
-    margin,             \
-    count_orders,       \
-    framed_kp,          \
-    meeting,            \
-    communications,     \
-    completed_tasks,    \
-    plan_activity,      \
-    calls_2x_minutes = await formatted_data()
+import const
 
 import pandas as pd
 from io import BytesIO
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+
+from pydantic import BaseModel
 
 app = FastAPI()
 
-@app.get("/generate-report")
+from fastapi import HTTPException
+import re
+import traceback  # для форматирования стека ошибки
+
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="templates"), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def index():
+    return """
+    <form method="post">
+        <label>Введите имена и фамилии через запятую:</label><br>
+        <textarea name="names" rows="5" cols="50"></textarea><br>
+        <button type="submit">Сгенерировать отчет</button>
+    </form>
+    """
+
+@app.post("/", response_class=StreamingResponse)
+async def handle_form(names: str = Form(...)):
+    const.workers.clear()
+    const.workers.extend([name.strip() for name in names.split(',') if name.strip()])
+    const.init_workers_list = {key: 0 for key in const.workers}
+    return await generate_excel_report()
+        
+class NamesRequest(BaseModel):
+    names: list[str]
+    
 async def generate_excel_report():
-    # Создаем DataFrame с данными
-    data = {
-        "ФИО": [
-            "Общий итог", "Антонян Сусанна", "Гаджун Анна", "Косушкина Таисия", 
-            "Кочелова Елизавета", "Кулеева Екатерина", "Курочкин Андрей", 
-            "Кустов Николай", "Милюкин Федор", "Орлова Ирина", "Панёв Егор", 
-            "Панчишкин Андрей", "Танаков Кирилл", "Щеглова Татьяна", 
-            "Ключенович Денис", "Трофимова Дарья", "Крузов Евгений"
-        ],
-        "Маржа": [
-            4959736, 390363, 3842816, 135759, "-", 77255, 1, 
-            175000, 205858, 7641, "-", 119544, "-", 5500, 
-            "-", "-", "-"
-        ],
-        "Количество заказов": [
-            37, 2, 20, 2, "-", 4, 1, 
-            2, 1, 1, "-", 3, "-", 1, 
-            "-", "-", "-"
-        ],
-        "Количество оформленных КП": [
-            132, 3, 13, 13, 5, 9, 3, 
-            7, 19, 21, 0, 1, 14, 13, 
-            5, 2, 4
-        ],
-        "Количество встреч": [
-            6, 0, 0, 0, 0, 0, 0, 
-            0, 2, 2, 2, 0, 0, 0, 
-            0, 0, 0
-        ],
-        "Количество коммуникаций": [
-            168, 0, 0, 20, 3, 3, 8, 
-            3, 26, 26, 7, 2, 26, 12, 
-            18, 8, 6
-        ],
-        "Количество выполненых задач": [
-            109, 0, 0, 0, 17, 2, 12, 
-            1, 11, 8, 0, 0, 43, 3, 
-            6, 0, 6
-        ],
-        "План активности": [
-            277, 0, 0, 20, 20, 5, 20, 
-            4, 37, 34, 7, 2, 69, 15, 
-            24, 8, 12
-        ],
-        "Звонки от 2х минут": [
-            226, 1, 1, 8, 10, 12, 14, 
-            46, 14, 3, 17, 5, 27, 7, 
-            33, 5, 23
-        ]
-    }
-
-    df = pd.DataFrame(data)
-
-    # Создаем Excel файл в памяти
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Отчет')
+    try:        
+        workers = const.workers
         
-        # Получаем workbook и worksheet для дополнительного форматирования
-        workbook = writer.book
-        worksheet = writer.sheets['Отчет']
-        
-        # Устанавливаем ширину столбцов
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            adjusted_width = (max_length + 2) * 1.2
-            worksheet.column_dimensions[column_letter].width = adjusted_width
+        margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes = await formatted_data()
 
-    output.seek(0)
+        data = {
+            "ФИО": ["Общий итог"] + workers,
+            "Маржа": [margin[0]] + [margin[1][w] for w in workers],
+            "Количество заказов": [count_orders[0]] + [count_orders[1][w] for w in workers],
+            "Количество оформленных КП": [framed_kp[0]] + [framed_kp[1][w] for w in workers],
+            "Количество встреч": [meeting[0]] + [meeting[1][w] for w in workers],
+            "Количество коммуникаций": [communications[0]] + [communications[1][w] for w in workers],
+            "Количество выполненых задач": [completed_tasks[0]] + [completed_tasks[1][w] for w in workers],
+            "План активности": [plan_activity1[0]] + [plan_activity1[1][w] for w in workers],
+            "Звонки от 2х минут": [calls_2x_minutes[0]] + [calls_2x_minutes[1][w] for w in workers],
+        }
 
-    # Возвращаем файл как ответ
-    return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=activity_report.xlsx"}
-    )
+        df = pd.DataFrame(data)
+
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Отчет')
+
+            workbook = writer.book
+            worksheet = writer.sheets['Отчет']
+
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = (max_length + 2) * 1.2
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+
+        output.seek(0)
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=activity_report.xlsx"}
+        )
+    
+    except Exception as e:
+        print("❌ Ошибка при генерации отчета:")
+        traceback.print_exc()  # выводит стек вызовов
+        raise HTTPException(status_code=500, detail=str(e))
