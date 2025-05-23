@@ -12,3 +12,5 @@ workers = [
 ]
 
 init_workers_list = {}
+
+dates_period = ''

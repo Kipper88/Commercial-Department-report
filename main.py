@@ -30,15 +30,22 @@ async def index():
     <form method="post">
         <label>Введите имена и фамилии через запятую:</label><br>
         <textarea name="names" rows="5" cols="50"></textarea><br>
+        
+        <label>Введите период дат в формате дд.мм.гггг через запятую (от, до)\n
+        Примечание: лучше писать не больше недели, поскольку портал может
+        возвращать ошибки из-за большого объема данных</label><br>
+        <textarea name="dates_periods" rows="5" cols="50"></textarea><br>
         <button type="submit">Сгенерировать отчет</button>
     </form>
     """
 
 @app.post("/", response_class=StreamingResponse)
-async def handle_form(names: str = Form(...)):
+async def handle_form(names: str = Form(...), dates_periods: str = Form(...)):
     const.workers.clear()
     const.workers.extend([name.strip() for name in names.split(',') if name.strip()])
     const.init_workers_list = {key: 0 for key in const.workers}
+    
+    const.dates_period = dates_periods
     return await generate_excel_report()
         
 class NamesRequest(BaseModel):
@@ -269,6 +276,11 @@ async def generate_excel_report():
                 CellIsRule(operator='greaterThanOrEqual', formula=['0'],
                            fill=PatternFill(start_color='FF9999', end_color='FF9999', fill_type='solid')))
 
+            # Add date period at the bottom
+            max_row = worksheet.max_row
+            worksheet[f'A{max_row + 2}'] = f"Период: {const.dates_period}"
+            worksheet[f'A{max_row + 2}'].font = Font(bold=True)
+
         output.seek(0)
 
         return StreamingResponse(
@@ -278,6 +290,5 @@ async def generate_excel_report():
         )
 
     except Exception as e:
-        print("❌ Ошибка при генерации отчета:")
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")

@@ -1,6 +1,6 @@
 from const import *
 from aiohttp import ClientSession
-from ..filters import get_last_week_range
+import const
 
 async def get_resp(entity_id, select_fields):
     params = {
@@ -12,7 +12,7 @@ async def get_resp(entity_id, select_fields):
             'select_fields': select_fields,
           #  'limit': 500,
             'filters': {
-                'date_added': get_last_week_range()
+                'date_added': const.dates_period
             }
     }
     
