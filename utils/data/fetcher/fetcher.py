@@ -14,7 +14,7 @@ async def get_314():
     for i in data:
         if is_in_current_week(i['date_added']):
             if i['11749'] in const.workers:
-                margin[i['11749']] += int(float(i['11812'].replace('.', '').replace(',', '.'))) if i['11812'] != '' and i['11752_db_value'] == '6916' else 0
+                margin[i['11749']] += float(i['11812'].replace('.', '').replace(',', '.')) if i['11812'] != '' and i['11752_db_value'] == '6916' else 0
                 count_orders[i['11749']] += 1 if i['11752_db_value'] == '6916' else 0
 
     return \
