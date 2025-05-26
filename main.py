@@ -5,7 +5,7 @@ import pandas as pd
 from io import BytesIO
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -18,8 +18,6 @@ from pydantic import BaseModel
 app = FastAPI()
 
 from fastapi import HTTPException
-import re
-import traceback  # для форматирования стека ошибки
 
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="templates"), name="static")
@@ -82,7 +80,6 @@ async def generate_excel_report():
             # Write headers two rows higher
             df.to_excel(writer, index=False, sheet_name='Отчет', startrow=2)
 
-            workbook = writer.book
             worksheet = writer.sheets['Отчет']
 
             # Column widths with empty columns
@@ -289,6 +286,5 @@ async def generate_excel_report():
             headers={"Content-Disposition": "attachment; filename=activity_report.xlsx"}
         )
 
-    except Exception as e:
-        traceback.print_exc()
+    except:
         raise HTTPException(status_code=500, detail="Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")

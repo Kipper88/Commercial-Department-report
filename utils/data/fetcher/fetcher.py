@@ -30,7 +30,7 @@ async def get_105():
     for i in data:
         if is_in_current_week(i['date_added']):
             if i['12571'] in const.workers:
-                framed_kp[i['12571']] += 1 if i['5628_db_value'] in ['5487', '5488'] else 0
+                framed_kp[i['12571']] += 1 if i['5628_db_value'] in ['5487', '5488', '5489'] else 0
                 
     return (sum(i for i in framed_kp.values()), framed_kp)
 
