@@ -40,21 +40,16 @@ async def get_231():
     completed_orders = const.init_workers_list.copy()
     
     for i in data_231:
-        people = i['8894']
-        if ',' in people:
-            # Убираем пробелы до/после запятых
-            cleaned = ','.join(part.strip() for part in people.split(','))
-            
-            # Разбиваем по запятым
-            people = [person.strip() for person in cleaned.split(',')]
-            people = [p.replace(' ()', '') for p in people]
+        people_raw = i['8894']
+        # Всегда получаем список имён, даже если одно имя
+        people = [p.strip().replace(' ()', '') for p in people_raw.split(',')] if ',' in people_raw else [people_raw.strip().replace(' ()', '')]
 
         for j in people:
             if is_in_current_week(i['date_added']):
                 if j in const.workers:
                     completed_orders[j] += 1 if i['8892_db_value'] == '6715' else 0
     
-    return (sum(i for i in completed_orders.values()), completed_orders)
+    return (sum(completed_orders.values()), completed_orders)
     
     
 # НЕ РАБОТАЕТ ВРЕМЕННО
