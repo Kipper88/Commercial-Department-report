@@ -18,3 +18,9 @@ async def formatted_data():
     plan_activity1 = await plan_activity(communications[1], completed_tasks[1])
     
     return margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes
+
+
+async def formatted_data_briefcase():
+    actual_first_order, current, re_potential, potential = await get_68_briefcase()
+    
+    return actual_first_order, current, re_potential, potential

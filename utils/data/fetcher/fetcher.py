@@ -1,4 +1,4 @@
-from ..data_loader import get_resp
+from ..data_loader import get_resp, get_resp_without_filter
 #from const import const.init_workers_list, const.workers
 from ...filters import is_in_current_week
 
@@ -35,7 +35,7 @@ async def get_105():
     return (sum(i for i in framed_kp.values()), framed_kp)
 
 async def get_231():
-    data_231 = await get_resp('231', '8894,8892')
+    data_231 = await get_resp('231', '8894,8892,8888')
     
     completed_orders = const.init_workers_list.copy()
     
@@ -45,7 +45,7 @@ async def get_231():
         people = [p.strip().replace(' ()', '') for p in people_raw.split(',')] if ',' in people_raw else [people_raw.strip().replace(' ()', '')]
 
         for j in people:
-            if is_in_current_week(i['date_added']):
+            if is_in_current_week(i['8888']):
                 if j in const.workers:
                     completed_orders[j] += 1 if i['8892_db_value'] == '6715' else 0
     
@@ -94,7 +94,7 @@ async def plan_activity(count_communications, count_completed_tasks):
     return total, result
     
 async def get_337():
-    data = await get_resp('337', '12009,12010,12011,12005')
+    data = await get_resp('337', '12009,12010,12011,12005,12006')
     
     calls = const.init_workers_list.copy()
     
@@ -102,8 +102,32 @@ async def get_337():
     norev_workers = {' '.join(reversed(name.split())): name for name in const.workers}
     
     for i in data:
-        if is_in_current_week(i['date_added']):
+        if is_in_current_week(i['12006']):
             if i['12005'] in rev_workers.values():
                 calls[norev_workers[i['12005']]] += sum([float(i['12009']), float(i['12010']), float(i['12011'])])
     
     return (sum(i for i in calls.values()), calls)
+
+
+async def get_68_briefcase():
+    data = await get_resp_without_filter('68', '10062,3617')
+    
+    workers__ = const.init_workers_list.copy()
+    
+    __actually_first_order = const.init_workers_list.copy()
+    __actually = const.init_workers_list.copy()
+    __re_potencial = const.init_workers_list.copy()
+    __potencial = const.init_workers_list.copy()
+    
+    for i in data:
+        if i['3617'] in workers__:
+            __actually_first_order[i['3617']] += 1 if i['10062_db_value'] == '7267' else 0
+            __actually[i['3617']] += 1 if i['10062_db_value'] == '6883' else 0
+            __re_potencial[i['3617']] += 1 if i['10062_db_value'] == '6884' else 0
+            __potencial[i['3617']] += 1 if i['10062_db_value'] == '6885' else 0
+    
+    return \
+    (sum(i for i in __actually_first_order.values()), __actually_first_order), \
+    (sum(i for i in __actually.values()), __actually), \
+    (sum(i for i in __re_potencial.values()), __re_potencial), \
+    (sum(i for i in __potencial.values()), __potencial)

@@ -1,4 +1,5 @@
-from utils.data.data_form import formatted_data
+from utils.data.data_form import formatted_data, formatted_data_briefcase
+from utils.data.data_loader import get_names
 import const
 
 import pandas as pd
@@ -22,13 +23,10 @@ from fastapi import HTTPException
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="templates"), name="static")
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/commercial_departament", response_class=HTMLResponse)
 async def index():
     return """
-    <form method="post">
-        <label>Введите имена и фамилии через запятую:</label><br>
-        <textarea name="names" rows="5" cols="50"></textarea><br>
-        
+    <form method="post">   
         <label>Введите период дат в формате дд-мм-гггг,дд-мм-гггг через запятую (от, до)\n
         Примечание: лучше писать не больше недели, поскольку портал может
         возвращать ошибки из-за большого объема данных</label><br>
@@ -37,14 +35,32 @@ async def index():
     </form>
     """
 
-@app.post("/", response_class=StreamingResponse)
-async def handle_form(names: str = Form(...), dates_periods: str = Form(...)):
+@app.post("/commercial_departament", response_class=StreamingResponse)
+async def handle_form(dates_periods: str = Form(...)):
+    names = await get_names()
     const.workers.clear()
-    const.workers.extend([name.strip() for name in names.split(',') if name.strip()])
+    const.workers.extend(names)
     const.init_workers_list = {key: 0 for key in const.workers}
     
     const.dates_period = dates_periods
     return await generate_excel_report()
+
+@app.get('/briefcase', response_class=HTMLResponse)
+async def briefcase():
+    return """
+    <form method="post" action="/briefcase">   
+        <button type="submit">Сгенерировать отчет</button>
+    </form>
+    """
+
+@app.post('/briefcase', response_class=StreamingResponse)
+async def handle_briefcase():
+    names = await get_names()
+    const.workers.clear()
+    const.workers.extend(names)
+    const.init_workers_list = {key: 0 for key in const.workers}
+    
+    return await generate_briefcase_report()
         
 class NamesRequest(BaseModel):
     names: list[str]
@@ -54,6 +70,7 @@ async def generate_excel_report():
         workers = const.workers
 
         margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes = await formatted_data()
+
 
         # Data with empty columns for spacing
         data = {
@@ -287,4 +304,43 @@ async def generate_excel_report():
         )
 
     except:
-        raise HTTPException(status_code=500, detail="Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")
+        import traceback
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.\n{tb}")
+
+async def generate_briefcase_report():
+    try:
+        workers = const.workers
+
+        try:
+            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase()
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            return tb
+
+        # Создание таблицы
+        data = {
+            "ФИО": ["Общий итог"] + workers,
+            "Действующий. Первый заказ": [__actually_first_order[0]] + [__actually_first_order[1][w] for w in workers],
+            "Действующий.": [__actually[0]] + [__actually[1][w] for w in workers],
+            "Повторно потенциальный.": [__re_potencial[0]] + [__re_potencial[1][w] for w in workers],
+            "Потенциальный": [__potencial[0]] + [__potencial[1][w] for w in workers],
+        }
+
+        df = pd.DataFrame(data)
+
+        # Сохраняем в буфер
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name="Отчёт")
+        output.seek(0)
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=activity_report.xlsx"}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
