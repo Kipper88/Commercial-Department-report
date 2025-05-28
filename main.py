@@ -93,7 +93,8 @@ async def handling_briefcase_all_workers():
         
 class NamesRequest(BaseModel):
     names: list[str]
-    
+
+#
 async def generate_excel_report(workers, init_workers_list, dates_period):
     try:
         margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes = await formatted_data(init_workers_list, dates_period, workers)
@@ -319,7 +320,7 @@ async def generate_excel_report(workers, init_workers_list, dates_period):
 
             # Add date period at the bottom
             max_row = worksheet.max_row
-            worksheet[f'A{max_row + 2}'] = f"Период: {const.dates_period}"
+            worksheet[f'A{max_row + 2}'] = f"Период: {dates_period}"
             worksheet[f'A{max_row + 2}'].font = Font(bold=True)
 
         output.seek(0)
