@@ -28,7 +28,7 @@ async def get_resp(entity_id, select_fields):
         return data
     
 async def get_names():
-    data = await get_resp('104', '2439,2438,10768,7470')
+    data = await get_resp_without_filter('104', '2439,2438,10768,7470')
     
     names = []
     

@@ -23,9 +23,17 @@ from fastapi import HTTPException
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="templates"), name="static")
 
-@app.get("/commercial_departament", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 async def index():
     return """
+    <a href="/commercial_departament">Коммерческий Департамент</a><br>
+    <a href="/briefcase">Портфель</a>
+    """
+
+@app.get("/commercial_departament", response_class=HTMLResponse)
+async def commercial_departament():
+    return """
+    <title>Коммерческий Департамент</title>
     <form method="post">   
         <label>Введите период дат в формате дд-мм-гггг,дд-мм-гггг через запятую (от, до)\n
         Примечание: лучше писать не больше недели, поскольку портал может
@@ -48,6 +56,7 @@ async def handle_form(dates_periods: str = Form(...)):
 @app.get('/briefcase', response_class=HTMLResponse)
 async def briefcase():
     return """
+    <title>Портфель</title>
     <form method="post" action="/briefcase">   
         <button type="submit">Сгенерировать отчет</button>
     </form>
@@ -304,9 +313,9 @@ async def generate_excel_report():
         )
 
     except:
-        import traceback
-        tb = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.\n{tb}")
+        # import traceback
+        # tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")
 
 async def generate_briefcase_report():
     try:
@@ -343,4 +352,6 @@ async def generate_briefcase_report():
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+        # import traceback
+        # tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")
