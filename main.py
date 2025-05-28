@@ -339,7 +339,7 @@ async def generate_excel_report(workers, init_workers_list, dates_period):
 async def generate_briefcase_report(workers, init_workers_list):
     try:
         try:
-            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase(init_workers_list)
+            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase(workers, init_workers_list)
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
