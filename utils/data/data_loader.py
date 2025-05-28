@@ -1,8 +1,7 @@
 from const import *
 from aiohttp import ClientSession, ClientTimeout
-import const
 
-async def get_resp(entity_id, select_fields):
+async def get_resp(entity_id, select_fields, dates_period):
     params = {
             'key': apiKeyRuk,
             'username': usernameRuk,
@@ -10,9 +9,8 @@ async def get_resp(entity_id, select_fields):
             'action': 'select',
             'entity_id': entity_id,
             'select_fields': select_fields,
-          #  'limit': 500,
             'filters': {
-                'date_added': const.dates_period
+                'date_added': dates_period
             }
     }
     
@@ -34,6 +32,16 @@ async def get_names():
     
     for i in data:
         names.append(f"{i['2439']} {i['2438']}") if i['10768_db_value'] == '6987' and i['7470_db_value'] in ['6753', '6754', '6392'] else ...
+    
+    return names
+
+async def get_names_without_comm_departament():
+    data = await get_resp_without_filter('104', '2439,2438,10768,7470')
+    
+    names = []
+    
+    for i in data:
+        names.append(f"{i['2439']} {i['2438']}") if not (i['10768_db_value'] == '6987' and i['7470_db_value'] in ['6753', '6754', '6392']) else ...
     
     return names
 

@@ -1,5 +1,5 @@
 from utils.data.data_form import formatted_data, formatted_data_briefcase
-from utils.data.data_loader import get_names
+from utils.data.data_loader import get_names, get_names_without_comm_departament
 import const
 
 import pandas as pd
@@ -27,7 +27,8 @@ app.mount("/static", StaticFiles(directory="templates"), name="static")
 async def index():
     return """
     <a href="/commercial_departament">Коммерческий Департамент</a><br>
-    <a href="/briefcase">Портфель</a>
+    <a href="/briefcase">Портфель</a><br>
+    <a href="/briefcase_all_workers">Портфель (все сотрудники)</a><br>
     """
 
 @app.get("/commercial_departament", response_class=HTMLResponse)
@@ -46,39 +47,56 @@ async def commercial_departament():
 @app.post("/commercial_departament", response_class=StreamingResponse)
 async def handle_form(dates_periods: str = Form(...)):
     names = await get_names()
-    const.workers.clear()
-    const.workers.extend(names)
-    const.init_workers_list = {key: 0 for key in const.workers}
+
+    init_workers_list = {key: 0 for key in names}
     
-    const.dates_period = dates_periods
-    return await generate_excel_report()
+    dates_period = dates_periods
+    return await generate_excel_report(names, init_workers_list, dates_period)
 
 @app.get('/briefcase', response_class=HTMLResponse)
 async def briefcase():
     return """
-    <title>Портфель</title>
-    <form method="post" action="/briefcase">   
-        <button type="submit">Сгенерировать отчет</button>
-    </form>
+        <title>Портфель клиентов</title>
+        <form method="post" action="/briefcase">   
+            <button type="submit">Сгенерировать отчет</button>
+        </form>
+        <br>
+        <p>ПРИМЕЧАНИЕ: отчет генерируется ~8 мин. Во время генерации не закрывайте страницу</p>
     """
 
 @app.post('/briefcase', response_class=StreamingResponse)
 async def handle_briefcase():
     names = await get_names()
-    const.workers.clear()
-    const.workers.extend(names)
-    const.init_workers_list = {key: 0 for key in const.workers}
+
+    init_workers_list = {key: 0 for key in names}
     
-    return await generate_briefcase_report()
+    return await generate_briefcase_report(names, init_workers_list)
+
+@app.get('/briefcase_all_workers', response_class=HTMLResponse)
+async def briefcase_all_workers():
+    
+    return """
+        <title>Портфель клиентов (все сотрудники)</title>
+        <form method="post" action="/briefcase_all_workers">   
+            <button type="submit">Сгенерировать отчет</button>
+        </form>
+        <br>
+        <p>ПРИМЕЧАНИЕ: отчет генерируется ~8 мин. Во время генерации не закрывайте страницу</p>
+    """
+    
+@app.post("/briefcase_all_workers", response_class=StreamingResponse)
+async def handling_briefcase_all_workers():
+    names = await get_names_without_comm_departament()
+    init_workers_list = {key: 0 for key in names}
+    
+    return await generate_briefcase_report_without_comm_departament(names, init_workers_list)
         
 class NamesRequest(BaseModel):
     names: list[str]
     
-async def generate_excel_report():
+async def generate_excel_report(workers, init_workers_list, dates_period):
     try:
-        workers = const.workers
-
-        margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes = await formatted_data()
+        margin, count_orders, framed_kp, meeting, communications, completed_tasks, plan_activity1, calls_2x_minutes = await formatted_data(init_workers_list, dates_period, workers)
 
 
         # Data with empty columns for spacing
@@ -313,16 +331,52 @@ async def generate_excel_report():
         )
 
     except:
+        import traceback
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format. {tb}")
+
+async def generate_briefcase_report(workers, init_workers_list):
+    try:
+        try:
+            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase(init_workers_list)
+        except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
+            return tb
+
+        # Создание таблицы
+        data = {
+            "ФИО": ["Общий итог"] + workers,
+            "Действующий. Первый заказ": [__actually_first_order[0]] + [__actually_first_order[1][w] for w in workers],
+            "Действующий.": [__actually[0]] + [__actually[1][w] for w in workers],
+            "Повторно потенциальный.": [__re_potencial[0]] + [__re_potencial[1][w] for w in workers],
+            "Потенциальный": [__potencial[0]] + [__potencial[1][w] for w in workers],
+        }
+
+        df = pd.DataFrame(data)
+
+        # Сохраняем в буфер
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name="Отчёт")
+        output.seek(0)
+
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=activity_report.xlsx"}
+        )
+
+    except Exception as e:
         # import traceback
         # tb = traceback.format_exc()
         raise HTTPException(status_code=500, detail=f"Internal Server Error, please contact the developer. Possible reasons: date or names entered in the wrong format.")
-
-async def generate_briefcase_report():
+    
+    
+async def generate_briefcase_report_without_comm_departament(workers, init_workers_list):
     try:
-        workers = const.workers
-
         try:
-            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase()
+            __actually_first_order, __actually, __re_potencial, __potencial = await formatted_data_briefcase(workers, init_workers_list)
         except Exception as e:
             import traceback
             tb = traceback.format_exc()
