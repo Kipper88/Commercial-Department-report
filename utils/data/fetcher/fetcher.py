@@ -1,4 +1,4 @@
-from ..data_loader import get_resp, get_resp_without_filter
+from ..data_loader import get_resp, get_resp_without_filter, get_names_without_comm_departament
 from ...filters import is_in_current_week
 
 class CommDepartament():
@@ -113,7 +113,29 @@ class CommDepartament():
 
 
 async def get_68_briefcase(workers, init_workers_list: dict):
-    data = await get_resp_without_filter('68', '10062,3617')
+    filters = {
+        "3676_db_value": {
+            "value": "5205", 
+            "condition": "search"
+        },
+        "10062_db_value": {
+            "value": "7267", 
+            "condition": "search"
+        },
+        "10062_db_value": {
+            "value": "6883", 
+            "condition": "search"
+        },
+        "10062_db_value": {
+            "value": "6884", 
+            "condition": "search"
+        },
+        "10062_db_value": {
+            "value": "6885", 
+            "condition": "search"
+        },
+    }
+    data = await get_resp_without_filter('68', '10062,3617', filters)
     
     workers__ = workers
     
@@ -121,7 +143,7 @@ async def get_68_briefcase(workers, init_workers_list: dict):
     __actually = init_workers_list.copy()
     __re_potencial = init_workers_list.copy()
     __potencial = init_workers_list.copy()
-    
+
     for i in data:
         if i['3617'] in workers__:
             __actually_first_order[i['3617']] += 1 if i['10062_db_value'] == '7267' else 0

@@ -10,7 +10,7 @@ async def get_resp(entity_id, select_fields, dates_period):
             'entity_id': entity_id,
             'select_fields': select_fields,
             'filters': {
-                'date_added': dates_period
+                '11983': dates_period
             }
     }
     
@@ -45,7 +45,7 @@ async def get_names_without_comm_departament():
     
     return names
 
-async def get_resp_without_filter(entity_id, select_fields):
+async def get_resp_without_filter(entity_id, select_fields, filters=None):
     params = {
             'key': apiKeyRuk,
             'username': usernameRuk,
@@ -53,7 +53,11 @@ async def get_resp_without_filter(entity_id, select_fields):
             'action': 'select',
             'entity_id': entity_id,
             'select_fields': select_fields,
+            #'limit': 100
     }
+    
+    if filters:
+        params['filters'] = filters
     
     timeout = ClientTimeout(total=3600, sock_connect=3600, sock_read=3600)
     async with ClientSession(timeout=timeout) as sess:
