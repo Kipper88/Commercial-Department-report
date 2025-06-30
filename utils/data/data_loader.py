@@ -10,7 +10,7 @@ async def get_resp(entity_id, select_fields, dates_period):
             'entity_id': entity_id,
             'select_fields': select_fields,
             'filters': {
-                '11983': dates_period
+               'date_added': dates_period
             }
     }
     
@@ -22,6 +22,7 @@ async def get_resp(entity_id, select_fields, dates_period):
         )
         data = await resp.json(content_type='text/html')
         data = data['data']
+
         
         return data
     

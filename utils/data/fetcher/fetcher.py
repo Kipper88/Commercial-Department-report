@@ -9,7 +9,7 @@ class CommDepartament():
         
     async def get_314(self):
         # МАРЖИНАЛЬНОСТЬ И КОЛ-ВО ЗАКАЗОВ
-        data = await get_resp('314', '11812,11749,11752', self.dates_period)
+        data = await get_resp_without_filter('314', '11812,11749,11752', filters={"11983": self.dates_period})
                 
         margin = self.init_workers_list.copy()
         count_orders = self.init_workers_list.copy() 
